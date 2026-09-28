@@ -57,23 +57,33 @@ expansion header on the back of the module.
 | --- | --- |
 | SCL (pin 21, or the SCL pin by AREF) | **B3** — header pin 8 (PB6, I2C4 SCL) |
 | SDA (pin 20, or the SDA pin by AREF) | **B5** — header pin 7 (PB7, I2C4 SDA) |
-| GND | header pin 12 |
+| GND | header pin 5 |
 
 Seen from the back of the module, **pin 1 is on the upper row, at the left**,
-and the upper row runs 1 to 10:
+and the upper row runs 1 to 10. All three bus pins are on that row:
 
 ```
 upper row   1   2   3   4   5   6   7   8   9  10
-                                   B5  B3
+                           GND     B5  B3
                                   SDA SCL
 ```
 
-Ground, pin 12, is on the other row.
+The wire colours on the pictured bench, if you want to copy them:
+
+| Signal | Lab harness (4-pin cable) | Mega wires |
+| --- | --- | --- |
+| GND | black | black |
+| SDA | white | **yellow** |
+| SCL | **yellow** | gray |
+| 3.3 V to the breakout's Vcc | — | red |
+
+Yellow is SCL on the Lab harness but SDA on the Mega side, so match the two
+by signal at the breakout, never by colour.
 
 ![The back of an Alchemy Lab with the bus harness on its expansion header](docs/lab-expansion-header.jpg)
 
-*The back of an Alchemy Lab in the rack, with a four-wire harness plugged
-onto its expansion header.*
+*The back of an Alchemy Lab in the rack, with its four-wire harness plugged
+onto the expansion header: black GND, white SDA, yellow SCL.*
 
 ![The PCB0012 I2C bus breakout with the Mega's and both Labs' wires](docs/i2c-bus-breakout.jpg)
 

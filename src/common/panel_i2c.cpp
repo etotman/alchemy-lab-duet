@@ -52,7 +52,7 @@
 using namespace alchemy;
 
 /* Diagnostic: drive both pins as plain GPIO square waves instead of I2C, so
- * B3 and B5 can be told apart with a multimeter against header pin 12.
+ * B3 and B5 can be told apart with a multimeter against header pin 5 (GND).
  *   PB6 (B3, SCL): 1 Hz    - 0.5 s high, 0.5 s low
  *   PB7 (B5, SDA): 0.25 Hz - 2 s high, 2 s low
  * The header's B1..B8 are the Seed2 DFM's own pad names; Electro-Smith's

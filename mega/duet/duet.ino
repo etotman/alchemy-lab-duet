@@ -39,7 +39,7 @@
 // LINK
 //   Mega SCL (pin 21, or the SCL pin by AREF)  ->  module header B3 (pin 8)
 //   Mega SDA (pin 20, or the SDA pin by AREF)  ->  module header B5 (pin 7)
-//   Mega GND                                   ->  module header pin 12
+//   Mega GND                                   ->  module header pin 5
 //   On the module those are PB6/PB7 = I2C4, NOT the board's own I2C1 on
 //   PB8/PB9. No level shifter: the bus idles at 5 V on the Mega's pull-ups
 //   (Wire.begin() enables the AVR's internal ones; Mega R3 layouts add 10k),
