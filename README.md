@@ -102,10 +102,11 @@ onto the expansion header: black GND, white SDA, yellow SCL.*
 *The bus breakout: a PCB0012 V2 from [SerWom](https://serwom.com/p12). The
 Mega and both Labs each plug into their own column, and every column's SDA,
 SCL, Vcc and ground are joined across the board, so this is where the bus
-becomes one bus. The board has its own pull-up resistors on SDA and SCL, fed
-from its Vcc row, which is wired to the Mega's 3.3 V pin here.*
+becomes one bus. Two 2.2 kΩ pull-up resistors are soldered onto it, one
+from SDA and one from SCL to its Vcc row, and Vcc is wired to the Mega's
+3.3 V pin. These are the bus's pull-ups; the Labs add none.*
 
-- **Keep the breakout's Vcc wire connected.** With it loose, the board's
+- **Keep the breakout's Vcc wire connected.** With it loose, the two
   pull-ups float and join SDA to SCL, and every transfer times out, while
   the idle lines still look fine. It is the first thing to check if the
   screen stops updating.
@@ -117,12 +118,14 @@ from its Vcc row, which is wired to the Mega's 3.3 V pin here.*
   Mega and the bus: Mega on its 5 V side, the breakout and both Labs on its
   3.3 V side.
 
-  The pictured bench runs **without** a shifter. The Mega's 5 V pull-ups and
-  the breakout's 3.3 V ones together hold the bus somewhere between the two
-  rails, relying on PB6/PB7 being 5 V-tolerant STM32 pins. It has run
-  without errors, but it is outside the manufacturer's guidance. Build it
-  that way at your own risk, and never leave the Mega powered with the Labs
-  switched off.
+  The pictured bench runs **without** a shifter. The 2.2 kΩ pull-ups to the
+  Mega's 3.3 V set the bus level. The Mega's own pull-ups to 5 V are much
+  weaker (the ATmega's internal ones, which `Wire.begin()` switches on, plus
+  10 kΩ on some Mega boards), so they lift the idle level only a little
+  above 3.3 V. It has run without errors, and PB6/PB7 are 5 V-tolerant STM32
+  pins, but a bus above 3.3 V is still outside the manufacturer's guidance.
+  Build it that way at your own risk, and never leave the Mega powered with
+  the Labs switched off.
 - **Label the wires by the Lab's B3/B5**, not by a breakout's silkscreen.
   Swapped SDA/SCL fails silently: every address NACKs and nothing else looks
   wrong.
