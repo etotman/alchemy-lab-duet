@@ -59,14 +59,41 @@ expansion header on the back of the module.
 | SDA (pin 20, or the SDA pin by AREF) | **B5** — header pin 7 (PB7, I2C4 SDA) |
 | GND | header pin 12 |
 
-- **No level shifter needed.** The bus idles at 5 V on the Mega's pull-ups
-  (the AVR needs 3.5 V to read a high), and PB6/PB7 are 5 V tolerant.
+Seen from the back of the module, **pin 1 is on the upper row, at the left**,
+and the upper row runs 1 to 10:
+
+```
+upper row   1   2   3   4   5   6   7   8   9  10
+                                   B5  B3
+                                  SDA SCL
+```
+
+Ground, pin 12, is on the other row.
+
+![The back of an Alchemy Lab with the bus harness on its expansion header](docs/lab-expansion-header.jpg)
+
+*The back of an Alchemy Lab in the rack, with a four-wire harness plugged
+onto its expansion header.*
+
+![The PCB0012 I2C bus breakout with the Mega's and both Labs' wires](docs/i2c-bus-breakout.jpg)
+
+*The bus breakout: a PCB0012 V2 from [SerWom](https://serwom.com/p12). The
+Mega and both Labs each plug into their own column, and every column's SDA,
+SCL, Vcc and ground are joined across the board, so this is where the bus
+becomes one bus. The board has its own pull-up resistors on SDA and SCL, fed
+from its Vcc row, which is wired to the Mega's 3.3 V pin here.*
+
+- **Keep the breakout's Vcc wire connected.** With it loose, the board's
+  pull-ups float and join SDA to SCL, and every transfer times out, while
+  the idle lines still look fine. It is the first thing to check if the
+  screen stops updating.
+- **No level shifter needed.** The Mega's own pull-ups (to 5 V) and the
+  breakout's (to 3.3 V) hold the bus high; the AVR needs 3.5 V to read a
+  high, and the Lab's PB6/PB7 are 5 V tolerant. This is the arrangement
+  pictured, and it runs with zero errors.
 - **Label the wires by the Lab's B3/B5**, not by a breakout's silkscreen.
   Swapped SDA/SCL fails silently: every address NACKs and nothing else looks
   wrong.
-- If you use a bus breakout with its own pull-up resistors, make sure its
-  supply wire is connected. With it loose, the floating pull-ups tie SDA to
-  SCL and every transfer times out.
 - The firmware uses **I2C4**, not the Lab's own internal I2C1 bus (PB8/PB9,
   which carries its IO expander and DAC).
 
@@ -301,6 +328,7 @@ timing-critical on the receiving module's own clock, as Duet does.
 │   ├── handpan/         the handpan engine (no libDaisy dependency)
 │   └── common/          panel_i2c: the I2C4 slave link to the Mega
 ├── mega/duet/           the Mega 2560 sketch: panel, strike lights, relay
+├── docs/                wiring photos
 ├── tools/
 │   ├── hostlink_reboot.py    read a Lab's firmware version / reboot it to DFU
 │   └── descriptor_probe/     check the controls the module will report
