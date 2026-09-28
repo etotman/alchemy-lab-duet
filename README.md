@@ -62,14 +62,20 @@ its own tuning, so two pans in different scales translate each other.
 
 ### Wiring
 
-**Hermetic Modular's
-[expansion header reference](https://hermeticmodular.com/docs/hardware#expansion-header)
-is the authority on this header**: its full pin table, voltages and warnings,
-and a guide to linking Labs over I2C, UART or SPI. Read it before you wire
-anything. What follows is how Duet applies it.
+**Hermetic Modular's hardware documentation is the authority on this
+header.** Read these sections before you wire anything:
 
-Their I2C guide links two Labs directly, with one Lab as the controller and
-the other as a target at 0x42. Duet uses the same pins, the same bus (I2C4),
+- [Expansion header](https://hermeticmodular.com/docs/hardware#expansion-header): the pinout and the headline warnings
+- [Pins and alternate functions](https://hermeticmodular.com/docs/hardware#pins-and-alternate-functions): what each pin can do
+- [Power and return paths](https://hermeticmodular.com/docs/hardware#power-and-return-paths): the rails you must never join
+- [Connecting two Alchemy Labs](https://hermeticmodular.com/docs/hardware#connecting-two-alchemy-labs): UART, SPI or I2C, and which pins never to join
+- [I2C between two Labs](https://hermeticmodular.com/docs/hardware#i2c-between-two-labs) and [Two external pull-ups are required](https://hermeticmodular.com/docs/hardware#two-external-pull-ups-are-required): the recipe Duet follows
+- [Electrical limits and bring-up](https://hermeticmodular.com/docs/hardware#electrical-limits-and-bring-up): 3.3 V logic, level shifting, cables
+
+What follows is how Duet applies them.
+
+Their [I2C guide](https://hermeticmodular.com/docs/hardware#i2c-between-two-labs) links two Labs directly, with one
+Lab as the controller and the other as a target at 0x42. Duet uses the same pins, the same bus (I2C4),
 the same speed (100 kHz) and the same pull-up rules. The one difference is
 that **the Mega takes the controller's place**, and **both Labs are targets**
 (0x42 and 0x43). The Mega has to be the controller anyway to draw each Lab's
@@ -88,7 +94,9 @@ Mega 2560 (5 V) ── level shifter ── bus breakout (3.3 V, pull-ups) ─�
 
 Seen from the back of the module, **pin 1 is at the marked end of the upper
 row**, and the upper row runs 1 to 10. It is not the usual odd/even ribbon
-numbering. All three bus pins are on that row:
+numbering: see the [pinout diagram](https://hermeticmodular.com/docs/hardware#expansion-header) and
+[pin table](https://hermeticmodular.com/docs/hardware#pins-and-alternate-functions). All three bus pins are on
+that row:
 
 ```
 upper row    1     2    3    4    5    6    7    8    9   10
@@ -99,16 +107,21 @@ upper row    1     2    3    4    5    6    7    8    9   10
 
 - **Pin 1 is −12 V and pin 11 is +12 V**, and pin 15 is the Lab's analog
   3.3 V rail. Check the harness sits on pins 5, 7 and 8 before powering up,
-  and never join any of those rails between two Labs.
+  and never join any of those rails between two Labs
+  ([Power and return paths](https://hermeticmodular.com/docs/hardware#power-and-return-paths)).
+- **Never use a full straight-through ribbon cable.** Wire only SDA, SCL and
+  ground ([Connecting two Alchemy Labs](https://hermeticmodular.com/docs/hardware#connecting-two-alchemy-labs)).
 - **Leave B7 and B8 (pins 10 and 20) alone.** They are the Lab's own I2C1
   bus, which carries its GPIO expander and CV DAC. Duet uses the free I2C4
-  on B3/B5.
+  on B3/B5 ([Sharing the onboard I2C bus](https://hermeticmodular.com/docs/hardware#sharing-the-onboard-i2c-bus)).
 
 #### Level shifter (required)
 
-The header carries **3.3 V MCU signals**. Hermetic Modular's rules are to
-"keep header logic between ground and 3.3 V" and to "add level shifting for
-other logic families". The Mega 2560 is a 5 V board: its own I2C pull-ups go
+The header carries **3.3 V MCU signals**. Hermetic Modular's
+[Electrical limits and bring-up](https://hermeticmodular.com/docs/hardware#electrical-limits-and-bring-up) says to
+keep header logic within ground and 3.3 V, notes that the header is not
+specified as a 5 V interface, and calls for level shifting to other logic
+families. The Mega 2560 is a 5 V board: its own I2C pull-ups go
 to 5 V, and it needs about 3.5 V to read a high. So a **bidirectional I2C
 level shifter** goes between the Mega and everything else. Two channels of a
 4-channel BSS138 board are enough.
@@ -132,25 +145,37 @@ that. Build it with the shifter.
 
 #### Pull-ups
 
+Hermetic Modular's rules are in
+[Two external pull-ups are required](https://hermeticmodular.com/docs/hardware#two-external-pull-ups-are-required).
+
 - **One set only, on the 3.3 V side:** one resistor from SDA to 3.3 V and one
-  from SCL to 3.3 V, for the whole bus. The Labs add none.
+  from SCL to 3.3 V, for the whole bus. The Labs add none: libDaisy
+  configures these pins without internal pull-ups.
 - **One 3.3 V source.** Hermetic Modular takes it from one Lab's 3V3A (pin 15)
-  and never joins pin 15 between Labs. Here it is the Mega's 3.3 V pin, which
+  and never joins pin 15 between Labs
+  ([Power and return paths](https://hermeticmodular.com/docs/hardware#power-and-return-paths)). Here it is the Mega's 3.3 V pin, which
   also feeds the shifter's LV side, so no Lab's rail is involved at all.
 - **Value.** Hermetic Modular suggests starting at 4.7 kΩ. The pictured bench
   uses **2.2 kΩ**, soldered onto the breakout's pull-up pads. BSS138 boards
   also carry their own 10 kΩ pull-ups on each side, which combine with
   yours: 2.2 kΩ becomes about 1.8 kΩ, and 4.7 kΩ about 3.2 kΩ.
 - **Rise time.** The target is at most 1,000 ns at 100 kHz, with
-  tᵣ ≈ 0.8473 × R × C. Even with a generous 200 pF of wiring, 1.8 kΩ gives
-  about 300 ns and 3.2 kΩ about 540 ns. Either value is comfortably inside.
+  tᵣ ≈ 0.8473 × R × C, where C includes both boards and the cable. Their
+  own example is about 800 ns for 4.7 kΩ at 200 pF. With the shifter's
+  resistors in parallel, 200 pF gives about 300 ns at 1.8 kΩ and 540 ns at
+  3.2 kΩ, both comfortably inside.
 
 #### Handling
 
 - **Plug and unplug the harness only with everything powered off**, the
-  Mega included, and power the Labs and the Mega together.
+  Mega included. Hermetic Modular says to power down before making or
+  changing any cable ([Expansion header](https://hermeticmodular.com/docs/hardware#expansion-header)).
+- **Power the Labs and the Mega together.** Don't leave the bus pulled high
+  into a Lab that is switched off
+  ([Two external pull-ups are required](https://hermeticmodular.com/docs/hardware#two-external-pull-ups-are-required)).
 - **Keep the bus wires short**, and run the ground wire alongside SDA and
-  SCL rather than taking it some other way.
+  SCL rather than taking it some other way
+  ([Electrical limits and bring-up](https://hermeticmodular.com/docs/hardware#electrical-limits-and-bring-up)).
 
 The wire colours on the pictured bench, if you want to copy them:
 
@@ -187,7 +212,8 @@ reach this board through the shifter's LV side.*
   Swapped SDA/SCL fails silently: every address NACKs and nothing else looks
   wrong.
 - The firmware uses **I2C4**, not the Lab's own internal I2C1 bus (PB8/PB9,
-  which carries its IO expander and DAC).
+  which carries its IO expander and DAC). See
+  [I2C between two Labs](https://hermeticmodular.com/docs/hardware#i2c-between-two-labs).
 
 ## The instrument
 
@@ -320,7 +346,8 @@ Each Lab needs the binary built for its address.
 **Over USB with dfu-util.** The Lab must be powered in the rack, with its
 front USB-C connected to the computer. The running firmware can reboot
 itself into the Daisy bootloader, which appears only briefly, so start
-dfu-util waiting **first**:
+dfu-util waiting **first**. The bootloader and its update mode are described
+in [Bootloader and update mode](https://hermeticmodular.com/docs/hardware#bootloader-and-update-mode).
 
 ```sh
 dfu-util -w -a 0 -s 0x90040000:leave -D duet_0x42.bin -d ,0483:df11 &
@@ -433,6 +460,9 @@ timing-critical on the receiving module's own clock, as Duet does.
 ## Credits and license
 
 MIT, see [LICENSE](LICENSE).
+
+Hardware reference: Hermetic Modular's
+[Alchemy Lab hardware documentation](https://hermeticmodular.com/docs/hardware).
 
 Built on Hermetic Modular's
 [alchemy-template](https://github.com/hermetic-modular/alchemy-template) and
