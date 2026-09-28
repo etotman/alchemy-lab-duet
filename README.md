@@ -55,20 +55,36 @@ its own tuning, so two pans in different scales translate each other.
 - Arduino Mega 2560 (tested with an Elegoo Mega)
 - 3.5" 480×320 TFT shield for the Mega: 16-bit parallel, ILI9488 controller
   (the common "3.5 inch TFT for Arduino Mega2560" board)
+- A bidirectional I2C level shifter: the common 4-channel BSS138 board
+- A way to join the bus lines: the pictured bench uses a Serial Wombat PCB0012
+  I2C breakout
+- Two pull-up resistors, 2.2 kΩ to 4.7 kΩ (see [Pull-ups](#pull-ups))
 
 ### Wiring
 
-One I2C bus: the Mega is the only master, and both Labs connect through the
-20-pin expansion header on the back of the module. **Hermetic Modular's
+**Hermetic Modular's
 [expansion header reference](https://hermeticmodular.com/docs/hardware#expansion-header)
-is the authority on this header**: its full pin table, voltages and warnings.
-Read it before you wire anything. What follows is the part Duet uses.
+is the authority on this header**: its full pin table, voltages and warnings,
+and a guide to linking Labs over I2C, UART or SPI. Read it before you wire
+anything. What follows is how Duet applies it.
 
-| Mega | Each Alchemy Lab expansion header |
-| --- | --- |
-| SCL (pin 21, or the SCL pin by AREF) | **B3** — header pin 8 (PB6, I2C4 SCL) |
-| SDA (pin 20, or the SDA pin by AREF) | **B5** — header pin 7 (PB7, I2C4 SDA) |
-| GND | header pin 5 (any ground pin works: 2, 5, 12–14, 16–19) |
+Their I2C guide links two Labs directly, with one Lab as the controller and
+the other as a target at 0x42. Duet uses the same pins, the same bus (I2C4),
+the same speed (100 kHz) and the same pull-up rules. The one difference is
+that **the Mega takes the controller's place**, and **both Labs are targets**
+(0x42 and 0x43). The Mega has to be the controller anyway to draw each Lab's
+panel, and being in the middle is what lets it relay strikes between them.
+
+```
+Mega 2560 (5 V) ── level shifter ── bus breakout (3.3 V, pull-ups) ─┬── Lab #1 (0x42)
+                                                                    └── Lab #2 (0x43)
+```
+
+| Signal | Mega (to the shifter's 5 V side) | Each Alchemy Lab expansion header (3.3 V side) |
+| --- | --- | --- |
+| SCL | pin 21, or the SCL pin by AREF | **B3** — header pin 8 (PB6, I2C4 SCL) |
+| SDA | pin 20, or the SDA pin by AREF | **B5** — header pin 7 (PB7, I2C4 SDA) |
+| GND | GND | header pin 5 (any ground pin works: 2, 5, 12–14, 16–19) |
 
 Seen from the back of the module, **pin 1 is at the marked end of the upper
 row**, and the upper row runs 1 to 10. It is not the usual odd/even ribbon
@@ -88,6 +104,54 @@ upper row    1     2    3    4    5    6    7    8    9   10
   bus, which carries its GPIO expander and CV DAC. Duet uses the free I2C4
   on B3/B5.
 
+#### Level shifter (required)
+
+The header carries **3.3 V MCU signals**. Hermetic Modular's rules are to
+"keep header logic between ground and 3.3 V" and to "add level shifting for
+other logic families". The Mega 2560 is a 5 V board: its own I2C pull-ups go
+to 5 V, and it needs about 3.5 V to read a high. So a **bidirectional I2C
+level shifter** goes between the Mega and everything else. Two channels of a
+4-channel BSS138 board are enough.
+
+| Shifter pin | Connects to |
+| --- | --- |
+| HV | Mega 5 V |
+| LV | Mega 3.3 V (the same supply as the pull-ups) |
+| GND | Mega GND and the bus ground |
+| HV1 / HV2 | Mega SDA / Mega SCL |
+| LV1 / LV2 | bus SDA / bus SCL (the breakout) |
+
+The shifter needs both sides powered to pass anything: with LV unconnected
+the bus goes dead. BSS138 boards are good to 400 kHz, far above the 100 kHz
+Duet uses, and nothing in the code changes.
+
+The bench in the photos was first run without a shifter. The bus then idled
+a little above 3.3 V: the Mega's weak 5 V pull-ups were fighting the 3.3 V
+ones. It worked, but it is outside the manufacturer's guidance, so don't copy
+that. Build it with the shifter.
+
+#### Pull-ups
+
+- **One set only, on the 3.3 V side:** one resistor from SDA to 3.3 V and one
+  from SCL to 3.3 V, for the whole bus. The Labs add none.
+- **One 3.3 V source.** Hermetic Modular takes it from one Lab's 3V3A (pin 15)
+  and never joins pin 15 between Labs. Here it is the Mega's 3.3 V pin, which
+  also feeds the shifter's LV side, so no Lab's rail is involved at all.
+- **Value.** Hermetic Modular suggests starting at 4.7 kΩ. The pictured bench
+  uses **2.2 kΩ**, soldered onto the breakout's pull-up pads. BSS138 boards
+  also carry their own 10 kΩ pull-ups on each side, which combine with
+  yours: 2.2 kΩ becomes about 1.8 kΩ, and 4.7 kΩ about 3.2 kΩ.
+- **Rise time.** The target is at most 1,000 ns at 100 kHz, with
+  tᵣ ≈ 0.8473 × R × C. Even with a generous 200 pF of wiring, 1.8 kΩ gives
+  about 300 ns and 3.2 kΩ about 540 ns. Either value is comfortably inside.
+
+#### Handling
+
+- **Plug and unplug the harness only with everything powered off**, the
+  Mega included, and power the Labs and the Mega together.
+- **Keep the bus wires short**, and run the ground wire alongside SDA and
+  SCL rather than taking it some other way.
+
 The wire colours on the pictured bench, if you want to copy them:
 
 | Signal | Lab harness (4-pin cable) | Mega wires |
@@ -95,10 +159,10 @@ The wire colours on the pictured bench, if you want to copy them:
 | GND | black | black |
 | SDA | white | **yellow** |
 | SCL | **yellow** | gray |
-| 3.3 V to the breakout's Vcc | — | red |
+| 3.3 V to the breakout's Vcc and the shifter's LV | — | red |
 
 Yellow is SCL on the Lab harness but SDA on the Mega side, so match the two
-by signal at the breakout, never by colour.
+by signal at the breakout and the shifter, never by colour.
 
 ![The back of an Alchemy Lab with the bus harness on its expansion header](docs/lab-expansion-header.jpg)
 
@@ -110,30 +174,15 @@ onto the expansion header: black GND, white SDA, yellow SCL.*
 *The bus breakout: a PCB0012 V2 from [Serial Wombat](https://www.serialwombat.com/). The
 Mega and both Labs each plug into their own column, and every column's SDA,
 SCL, Vcc and ground are joined across the board, so this is where the bus
-becomes one bus. Two 2.2 kΩ pull-up resistors are soldered onto it, one
-from SDA and one from SCL to its Vcc row, and Vcc is wired to the Mega's
-3.3 V pin. These are the bus's pull-ups; the Labs add none.*
+becomes one bus. Its two 2.2 kΩ pull-up resistors are soldered onto the pads
+on its back, one from SDA and one from SCL to its Vcc row, and Vcc is wired
+to the Mega's 3.3 V pin. With the level shifter in, the Mega's SDA and SCL
+reach this board through the shifter's LV side.*
 
 - **Keep the breakout's Vcc wire connected.** With it loose, the two
   pull-ups float and join SDA to SCL, and every transfer times out, while
   the idle lines still look fine. It is the first thing to check if the
   screen stops updating.
-- **Voltage levels: read this one.** The expansion header carries
-  **3.3 V MCU signals**, and Hermetic Modular's reference says not to connect
-  5 V logic to it. The Mega 2560 is a 5 V board: its own I2C pull-ups go to
-  5 V, and its TWI needs about 3.5 V to see a high. The safe build puts a
-  **bidirectional I2C level shifter** (the common BSS138 type) between the
-  Mega and the bus: Mega on its 5 V side, the breakout and both Labs on its
-  3.3 V side.
-
-  The pictured bench runs **without** a shifter. The 2.2 kΩ pull-ups to the
-  Mega's 3.3 V set the bus level. The Mega's own pull-ups to 5 V are much
-  weaker (the ATmega's internal ones, which `Wire.begin()` switches on, plus
-  10 kΩ on some Mega boards), so they lift the idle level only a little
-  above 3.3 V. It has run without errors, and PB6/PB7 are 5 V-tolerant STM32
-  pins, but a bus above 3.3 V is still outside the manufacturer's guidance.
-  Build it that way at your own risk, and never leave the Mega powered with
-  the Labs switched off.
 - **Label the wires by the Lab's B3/B5**, not by a breakout's silkscreen.
   Swapped SDA/SCL fails silently: every address NACKs and nothing else looks
   wrong.
