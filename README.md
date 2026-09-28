@@ -51,22 +51,34 @@ its own tuning, so two pans in different scales translate each other.
 ### Wiring
 
 One I2C bus: the Mega is the only master, and both Labs connect through the
-expansion header on the back of the module.
+20-pin expansion header on the back of the module. **Hermetic Modular's
+[expansion header reference](https://hermeticmodular.com/docs/hardware#expansion-header)
+is the authority on this header**: its full pin table, voltages and warnings.
+Read it before you wire anything. What follows is the part Duet uses.
 
 | Mega | Each Alchemy Lab expansion header |
 | --- | --- |
 | SCL (pin 21, or the SCL pin by AREF) | **B3** — header pin 8 (PB6, I2C4 SCL) |
 | SDA (pin 20, or the SDA pin by AREF) | **B5** — header pin 7 (PB7, I2C4 SDA) |
-| GND | header pin 5 |
+| GND | header pin 5 (any ground pin works: 2, 5, 12–14, 16–19) |
 
-Seen from the back of the module, **pin 1 is on the upper row, at the left**,
-and the upper row runs 1 to 10. All three bus pins are on that row:
+Seen from the back of the module, **pin 1 is at the marked end of the upper
+row**, and the upper row runs 1 to 10. It is not the usual odd/even ribbon
+numbering. All three bus pins are on that row:
 
 ```
-upper row   1   2   3   4   5   6   7   8   9  10
-                           GND     B5  B3
-                                  SDA SCL
+upper row    1     2    3    4    5    6    7    8    9   10
+           -12V   GND   B2   B4  GND   B6   B5   B3   B1   B7
+                                           SDA  SCL       (Lab's own
+                                                           I2C1, busy)
 ```
+
+- **Pin 1 is −12 V and pin 11 is +12 V**, and pin 15 is the Lab's analog
+  3.3 V rail. Check the harness sits on pins 5, 7 and 8 before powering up,
+  and never join any of those rails between two Labs.
+- **Leave B7 and B8 (pins 10 and 20) alone.** They are the Lab's own I2C1
+  bus, which carries its GPIO expander and CV DAC. Duet uses the free I2C4
+  on B3/B5.
 
 The wire colours on the pictured bench, if you want to copy them:
 
@@ -97,10 +109,20 @@ from its Vcc row, which is wired to the Mega's 3.3 V pin here.*
   pull-ups float and join SDA to SCL, and every transfer times out, while
   the idle lines still look fine. It is the first thing to check if the
   screen stops updating.
-- **No level shifter needed.** The Mega's own pull-ups (to 5 V) and the
-  breakout's (to 3.3 V) hold the bus high; the AVR needs 3.5 V to read a
-  high, and the Lab's PB6/PB7 are 5 V tolerant. This is the arrangement
-  pictured, and it runs with zero errors.
+- **Voltage levels: read this one.** The expansion header carries
+  **3.3 V MCU signals**, and Hermetic Modular's reference says not to connect
+  5 V logic to it. The Mega 2560 is a 5 V board: its own I2C pull-ups go to
+  5 V, and its TWI needs about 3.5 V to see a high. The safe build puts a
+  **bidirectional I2C level shifter** (the common BSS138 type) between the
+  Mega and the bus: Mega on its 5 V side, the breakout and both Labs on its
+  3.3 V side.
+
+  The pictured bench runs **without** a shifter. The Mega's 5 V pull-ups and
+  the breakout's 3.3 V ones together hold the bus somewhere between the two
+  rails, relying on PB6/PB7 being 5 V-tolerant STM32 pins. It has run
+  without errors, but it is outside the manufacturer's guidance. Build it
+  that way at your own risk, and never leave the Mega powered with the Labs
+  switched off.
 - **Label the wires by the Lab's B3/B5**, not by a breakout's silkscreen.
   Swapped SDA/SCL fails silently: every address NACKs and nothing else looks
   wrong.
