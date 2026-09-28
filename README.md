@@ -99,7 +99,7 @@ onto the expansion header: black GND, white SDA, yellow SCL.*
 
 ![The PCB0012 I2C bus breakout with the Mega's and both Labs' wires](docs/i2c-bus-breakout.jpg)
 
-*The bus breakout: a PCB0012 V2 from [SerWom](https://serwom.com/p12). The
+*The bus breakout: a PCB0012 V2 from [Serial Wombat](https://www.serialwombat.com/). The
 Mega and both Labs each plug into their own column, and every column's SDA,
 SCL, Vcc and ground are joined across the board, so this is where the bus
 becomes one bus. Two 2.2 kΩ pull-up resistors are soldered onto it, one
