@@ -1,5 +1,13 @@
 # Duet — two Alchemy Labs that answer each other
 
+![Two Alchemy Labs either side of the Mega's 3.5-inch screen, which shows the Duet panel](docs/duet-in-the-rack.jpg)
+
+*Duet in the rack: Lab #2 on the left, Lab #1 on the right, and between
+them the Mega's 3.5" screen in a printed 3U faceplate. The screen is
+showing Lab #2's Play page, with the triangle beside the title pointing
+toward it. Each Lab's column of strike lights runs down its side of the
+screen.*
+
 Firmware for two [Hermetic Modular Alchemy Lab](https://hermeticmodular.com/modules/alchemy-lab)
 Eurorack modules and an Arduino Mega 2560 with a 3.5" TFT, working as one
 instrument. Each Lab is a physically modelled handpan. Play one, and the
@@ -363,7 +371,7 @@ timing-critical on the receiving module's own clock, as Duet does.
 │   ├── handpan/         the handpan engine (no libDaisy dependency)
 │   └── common/          panel_i2c: the I2C4 slave link to the Mega
 ├── mega/duet/           the Mega 2560 sketch: panel, strike lights, relay
-├── docs/                wiring photos
+├── docs/                photos: the rack, the wiring
 ├── tools/
 │   ├── hostlink_reboot.py    read a Lab's firmware version / reboot it to DFU
 │   └── descriptor_probe/     check the controls the module will report
