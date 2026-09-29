@@ -115,7 +115,7 @@ upper row    1     2    3    4    5    6    7    8    9   10
   bus, which carries its GPIO expander and CV DAC. Duet uses the free I2C4
   on B3/B5 ([Sharing the onboard I2C bus](https://hermeticmodular.com/docs/hardware#sharing-the-onboard-i2c-bus)).
 
-#### Level shifter (required)
+#### Level shifter
 
 The header carries **3.3 V MCU signals**. Hermetic Modular's
 [Electrical limits and bring-up](https://hermeticmodular.com/docs/hardware#electrical-limits-and-bring-up) says to
@@ -138,10 +138,11 @@ The shifter needs both sides powered to pass anything: with LV unconnected
 the bus goes dead. BSS138 boards are good to 400 kHz, far above the 100 kHz
 Duet uses, and nothing in the code changes.
 
-The bench in the photos was first run without a shifter. The bus then idled
-a little above 3.3 V: the Mega's weak 5 V pull-ups were fighting the 3.3 V
-ones. It worked, but it is outside the manufacturer's guidance, so don't copy
-that. Build it with the shifter.
+This is how the bench is wired and running: the Mega alone on the 5 V side,
+and the breakout, its pull-ups and both Labs on the 3.3 V side. Without the
+shifter, the Mega's own 5 V pull-ups would lift the whole bus above 3.3 V.
+That can work, but it is outside the manufacturer's guidance, so don't
+leave the shifter out.
 
 #### Pull-ups
 
@@ -179,12 +180,12 @@ Hermetic Modular's rules are in
 
 The wire colours on the pictured bench, if you want to copy them:
 
-| Signal | Lab harness (4-pin cable) | Mega wires |
+| Signal | Lab harness (4-pin cable) | Mega wires (to the shifter) |
 | --- | --- | --- |
 | GND | black | black |
-| SDA | white | **yellow** |
-| SCL | **yellow** | gray |
-| 3.3 V to the breakout's Vcc and the shifter's LV | — | red |
+| SDA | white | **yellow** (to HV1) |
+| SCL | **yellow** | gray (to HV2) |
+| 3.3 V (the shifter's LV and the breakout's Vcc) | — | red |
 
 Yellow is SCL on the Lab harness but SDA on the Mega side, so match the two
 by signal at the breakout and the shifter, never by colour.
@@ -201,8 +202,9 @@ Mega and both Labs each plug into their own column, and every column's SDA,
 SCL, Vcc and ground are joined across the board, so this is where the bus
 becomes one bus. Its two 2.2 kΩ pull-up resistors are soldered onto the pads
 on its back, one from SDA and one from SCL to its Vcc row, and Vcc is wired
-to the Mega's 3.3 V pin. With the level shifter in, the Mega's SDA and SCL
-reach this board through the shifter's LV side.*
+to the Mega's 3.3 V pin. This photo was taken before the level shifter went
+in, so the Mega's wires here run straight to the breakout. On the finished
+bench, that column is fed by the shifter's LV side instead.*
 
 - **Keep the breakout's Vcc wire connected.** With it loose, the two
   pull-ups float and join SDA to SCL, and every transfer times out, while
