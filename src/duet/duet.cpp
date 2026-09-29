@@ -396,7 +396,7 @@ static Presets     presets(hw.seed.qspi);
  * handpan preset would not load here anyway. To debug the link, pass
  * panel_i2c::Diag() here instead of "i2c" and HELLO carries a live I2C4
  * register dump (tools/hostlink_reboot.py hello <port>). */
-static hostlink::Host host(presets, "duet", "Duet", "0.1.0", "i2c");
+static hostlink::Host host(presets, "duet", "Duet", "0.1.1", "i2c");
 
 /* ── Shared control state ────────────────────────────────────────────── */
 
@@ -1021,7 +1021,7 @@ static Manual manual =
                  "instrument breathe instead of sit still.\n\n"
                  "**Metal** is the level of the six untuned shell modes — "
                  "how much audible steel sits above the tuned core. "
-                 "**Tilt** is how fast the top end closes down: low is "
+                 "**Tilt** is how bright the ring is and how fast it closes: low is "
                  "bright and gong-like, high is a thick, dark, "
                  "fast-closing shell.\n\n"
                  "**Body** is the Helmholtz cavity — the air inside the "
@@ -1075,7 +1075,7 @@ static void DescribeManual()
                   "handpan; left goes toward bell metal, right toward gongs.");
     k_shimmer.Help("Beating between each mode and its split partner.");
     k_metal.Help("Level of the untuned shell modes above the tuned core.");
-    k_tilt.Help("How fast the high modes die relative to the fundamental.");
+    k_tilt.Help("Brightness of the ring: overtone level and how fast it dies.");
     k_cavlvl.Help("The air cavity in the mix — the bloom under the attack.");
     k_contact.Help("Bare skin-on-steel tak, bypassing the resonators.");
 

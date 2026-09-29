@@ -103,8 +103,63 @@ constexpr float kHarmAmp[3]  = { 1.00f, 0.56f, 0.30f };
 constexpr float kShellAmp[6] = { 0.130f, 0.100f, 0.072f, 0.050f, 0.036f, 0.026f };
 
 /* T60 of a shell mode relative to the tuned modes at the same frequency —
- * they are heavily damped and essentially gone inside a second. */
+ * they are heavily damped and essentially gone inside a second. This is
+ * the value at Metal's default; Metal lengthens it toward the top. */
 constexpr float kShellDamp = 0.22f;
+
+/* ── Voicing knob curves ───────────────────────────────────────────────
+ *
+ * Every Voicing knob is mapped through three points: its value at 0, at
+ * the default the voice was approved at, and at 1. The default point is
+ * what the engine always did at that knob position, so the approved voice
+ * is unchanged; the two ends are where the range was widened.
+ *
+ * The widening was measured, not guessed. With the old straight-line
+ * mappings, sweeping Metal, Tilt or Contact from end to end changed the
+ * output by 19-36 dB less than the sound itself — below hearing next to
+ * the tuned modes — and Shimmer's beat rate spanned only 0.1-0.9 Hz.
+ *
+ * The reason is the same for Contact and Metal. A mode rings with the
+ * whole force pulse integrated into it, which at a 0.8 ms pulse is about
+ * 25x the pulse's own height, while the bare contact noise goes straight
+ * to the output. So a "level" that looks generous on paper sits 30 dB
+ * under the note. Metal's shell modes also start 18-32 dB down and sit
+ * where the half-sine pulse is already rolling off. */
+constexpr float kShimDef     = 0.45f;   /* knob defaults the voice was   */
+constexpr float kMetalDef    = 0.50f;   /* approved at (render Defaults, */
+constexpr float kTiltDef     = 0.55f;   /* preset factory values)        */
+constexpr float kContactDef  = 0.55f;
+
+/* Shimmer: relative split (fraction of the mode frequency), absolute beat
+ * floor in Hz, and the weaker half's share of the pair. The pair stays
+ * lopsided even at the top so the beat never nulls into a tremolo. */
+constexpr float kShimRel[3]   = { 0.0006f, 0.00177f, 0.0110f };
+constexpr float kShimFloor[3] = { 0.10f,   0.46f,    3.50f   };
+constexpr float kShimUpper[3] = { 0.32f,   0.32f,    0.44f   };
+
+/* Metal: shell-mode level in dB and their T60 relative to kShellDamp. */
+constexpr float kMetalDb[3]   = { -60.f, -6.02f, 18.f };
+constexpr float kMetalRing[3] = { 0.55f, 1.f,    2.8f };
+
+/* Tilt: exponent of T60 against partial ratio. 0.7725 is the old default;
+ * below zero the upper partials outlast the fundamental (glassy), at the
+ * top everything above the fundamental is gone in a fraction of a second.
+ *
+ * Decay alone was not enough to hear: the octave and twelfth already sit
+ * 8 and 18 dB under the fundamental, so changing how fast they fade
+ * changed little. Tilt therefore also tilts their level, as ratio^k on
+ * the tuned triple only (Metal owns the shell modes' level): at 0 the
+ * octave comes up level with the fundamental, at 1 it is ~10 dB further
+ * down, and at the default k is 0, so the approved voice is untouched. */
+constexpr float kTiltExp[3]   = { -0.60f, 0.7725f, 2.40f };
+constexpr float kTiltLvl[3]   = {  0.90f, 0.f,    -1.60f };
+
+/* Contact: gain of the bare tak in dB. The old mapping was 0.30 x knob,
+ * which put the tak 50-60 dB under the note at every setting. The default
+ * is raised to +8 dB, which still leaves it about 40 dB down and masked,
+ * so the approved voice does not change; the top is where it becomes the
+ * audible click of skin on steel, peaking a few dB under the attack. */
+constexpr float kContactDb[3] = { -30.f, 8.f, 38.f };
 
 /* How much faster a high rim note decays than the ding. Small shells
  * store less energy; the exponent is on the frequency ratio. */
@@ -287,6 +342,22 @@ inline float Clampf(float v, float lo, float hi)
     return v < lo ? lo : (v > hi ? hi : v);
 }
 
+/** Piecewise-linear knob curve: y[0] at 0, y[1] at x_def, y[2] at 1. */
+inline float Through(float x, float x_def, const float (&y)[3])
+{
+    x = Clampf(x, 0.f, 1.f);
+    if (x <= x_def) return y[0] + (y[1] - y[0]) * (x / x_def);
+    return y[1] + (y[2] - y[1]) * ((x - x_def) / (1.f - x_def));
+}
+
+/** Through() in dB, returned as a linear gain; exactly 0 at the knob's
+ *  bottom stop so "off" is off. */
+inline float ThroughDb(float x, float x_def, const float (&db)[3])
+{
+    if (x <= 0.f) return 0.f;
+    return powf(10.f, Through(x, x_def, db) * 0.05f);
+}
+
 /**
  * Output limiter: exactly transparent below the knee, saturating above it.
  *
@@ -345,13 +416,17 @@ void RebuildField(uint8_t f)
                        * powf(root / hz, kFieldDecayExp);
 
     /* How steeply the top end closes down relative to the fundamental. */
-    const float tilt   = 0.25f + 0.95f * Clampf(p_tilt_, 0.f, 1.f);
+    const float tilt   = Through(p_tilt_, kTiltDef, kTiltExp);
+    const float tilt_k = Through(p_tilt_, kTiltDef, kTiltLvl);
 
     /* The beating pair split. Expressed as a fraction of the mode
      * frequency and then floored in absolute Hz, because what the ear
      * tracks is beats per second, and a purely proportional split makes
      * the ding shimmer far slower than the top notes. */
     const float shim   = Clampf(p_shimmer_, 0.f, 1.f);
+    const float shim_rel   = Through(shim, kShimDef, kShimRel);
+    const float shim_floor = Through(shim, kShimDef, kShimFloor);
+    const float shim_upper = Through(shim, kShimDef, kShimUpper);
 
     /* Tuned-triple stretch. The exponent form is used rather than a linear
      * detune because it keeps the intervals musically coherent as it bends
@@ -364,7 +439,8 @@ void RebuildField(uint8_t f)
      * modes (a fingertip out on the shoulder). */
     const float pos    = Clampf(p_pos_, 0.f, 1.f);
     const float ptilt  = -0.55f + 1.00f * pos;
-    const float metal  = Clampf(p_metal_, 0.f, 1.f);
+    const float metal      = ThroughDb(p_metal_, kMetalDef, kMetalDb);
+    const float shell_damp = kShellDamp * Through(p_metal_, kMetalDef, kMetalRing);
 
     /* The ding is the largest field and the one the cavity is tuned to:
      * more fundamental, less steel, longer ring. */
@@ -402,9 +478,8 @@ void RebuildField(uint8_t f)
              * each other instead of pulsing in lockstep. */
             const float mhz_nom = hz * hr;
             const float jit     = 1.f + 0.40f * Jitter(f, static_cast<uint8_t>(m + 40));
-            float beat_hz = (0.0006f + 0.0026f * shim) * mhz_nom;
-            const float beat_min = (0.10f + 0.80f * shim);
-            if (beat_hz < beat_min) beat_hz = beat_min;
+            float beat_hz = shim_rel * mhz_nom;
+            if (beat_hz < shim_floor) beat_hz = shim_floor;
             beat_hz *= jit;
 
             /* two modes at f(1 +/- s) beat at 2*s*f */
@@ -418,11 +493,12 @@ void RebuildField(uint8_t f)
              * than as a living instrument; a real field's split pair is
              * lopsided and the two halves decay at different rates, so the
              * beat breathes and then drifts apart instead of pumping. */
-            amp     = kHarmAmp[h] * (upper ? 0.32f : 0.68f);
+            amp     = kHarmAmp[h] * (upper ? shim_upper : 1.f - shim_upper);
             dampmul = upper ? 0.86f : 1.f;
 
             /* Out on the shoulder the fundamental itself thins out. */
             if (h == 0) amp *= (1.f - 0.40f * pos) * dingf;
+            else        amp *= powf(hr, tilt_k);
         }
         else
         {
@@ -430,7 +506,7 @@ void RebuildField(uint8_t f)
             const uint8_t k = static_cast<uint8_t>(m - 6);
             ratio   = kInharmonic[k] * (1.f + 0.045f * Jitter(f, m));
             amp     = kShellAmp[k] * metal * dingm;
-            dampmul = kShellDamp;
+            dampmul = shell_damp;
         }
 
         const float mhz = hz * ratio;
@@ -520,7 +596,7 @@ void RebuildGlobal()
     a_cavlvl_  = Clampf(p_cavlvl_,  0.f, 1.f);
     a_bloom_   = Clampf(p_bloom_,   0.f, 60.f);
     a_dyn_     = Clampf(p_dyn_,     0.f, 1.f);
-    a_contact_ = Clampf(p_contact_, 0.f, 1.f);
+    a_contact_ = ThroughDb(p_contact_, kContactDef, kContactDb);
     a_mallet_  = Clampf(p_mallet_,  0.f, 1.f);
     a_pos_     = Clampf(p_pos_,     0.f, 1.f);
     a_level_   = Clampf(p_level_,   0.f, 1.f);
@@ -775,9 +851,14 @@ void Process(const float* ext, float* out_l, float* out_r, size_t n)
     retune_cursor_ = static_cast<uint8_t>((retune_cursor_ + 1u) % kNumFields);
 
     /* --- bloom: rotate the live coefficients off the nominal pair -------
-     * The offset is at most a few tens of cents, so the rotation angle per
-     * mode is under 0.003 rad and the small-angle form is exact to well
-     * past float precision. No trig in the hot path. */
+     * The offset is at most a few tens of cents, so the small-angle form
+     * needs no trig in the hot path. It must be normalised, though: the
+     * unnormalised rotation (1, th) has magnitude sqrt(1 + th^2), and th is
+     * w * offset, which for a high mode at full bloom reaches ~0.03 rad.
+     * That is enough to push a long-ringing pole (r ~ 0.9998) past 1, and
+     * the mode then grows every sample the bloom lasts — under repeated
+     * hard strikes, all the way to NaN. 1 - th^2/2 is 1/sqrt(1 + th^2) to
+     * fourth order, so the pole's radius stays r. */
     for (uint8_t f = 0; f < kNumFields; f++)
     {
         if (f_bloom_[f] <= 1e-6f) continue;
@@ -788,8 +869,9 @@ void Process(const float* ext, float* out_l, float* out_r, size_t n)
         {
             const uint16_t i = b + m;
             const float th = m_w_[i] * d;
-            m_cr_[i] = m_cr0_[i] - m_ci0_[i] * th;
-            m_ci_[i] = m_ci0_[i] + m_cr0_[i] * th;
+            const float nk = 1.f - 0.5f * th * th;
+            m_cr_[i] = (m_cr0_[i] - m_ci0_[i] * th) * nk;
+            m_ci_[i] = (m_ci0_[i] + m_cr0_[i] * th) * nk;
         }
 
         f_bloom_[f] *= bloom_decay_;
@@ -811,7 +893,7 @@ void Process(const float* ext, float* out_l, float* out_r, size_t n)
 
     const float cav_lvl  = a_cavlvl_;
     const float cav_send = 0.55f * a_cavlvl_;   /* cavity -> fields */
-    const float contact  = 0.30f * a_contact_;  /* bare tak in the mix  */
+    const float contact  = a_contact_;          /* bare tak in the mix  */
 
     for (size_t s = 0; s < n; s++)
     {

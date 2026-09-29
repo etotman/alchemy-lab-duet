@@ -119,7 +119,8 @@ void SetHandDamp(float d);
 /* ── Voicing ("the tuner's page") ────────────────────────────────────── */
 
 /** Depth of the split between each mode and its beating partner. 0 is a
- *  dead-still perfectly symmetric field; 1 beats a few times a second. */
+ *  dead-still perfectly symmetric field; the default beats about every two
+ *  seconds; 1 beats three or four times a second, and deeper. */
 void SetShimmer(float s);
 
 /**
@@ -138,12 +139,16 @@ void SetShimmer(float s);
 void SetTemper(float t);
 
 /** Level of the six untuned shell modes — how much audible steel sits on
- *  top of the tuned 1:2:3 core. */
+ *  top of the tuned 1:2:3 core. A dB taper: 0 is off, the default leaves
+ *  them 20-30 dB under the note, and the top brings them up by 24 dB and
+ *  lets them ring nearly three times as long. */
 void SetMetal(float m);
 
-/** How fast the high modes die relative to the fundamental. Low values
- *  keep the instrument bright and gong-like; high values give the dark,
- *  fast-closing top end of a thick, well-annealed shell. */
+/** Brightness of the ring: tilts both the level and the decay of the
+ *  octave and twelfth against the fundamental. At 0 the octave is as loud
+ *  as the fundamental and outlasts it (bright, glassy); high values give
+ *  the dark, fast-closing top end of a thick, well-annealed shell, where
+ *  only the fundamental is left after a fraction of a second. */
 void SetTilt(float t);
 
 /** Helmholtz frequency as a ratio of the ding's fundamental (~0.5..2). */
@@ -165,7 +170,9 @@ void SetSpread(float s);
  *  0 makes every strike identical in colour; 1 is a real instrument. */
 void SetDynamics(float d);
 
-/** Level of the bare skin-on-steel "tak" that bypasses the resonators. */
+/** Level of the bare skin-on-steel "tak" that bypasses the resonators. A
+ *  dB taper: masked under the note up to the default, an audible click
+ *  near the top. */
 void SetContact(float c);
 
 /** Output level, 0..1 (unity at 1). */

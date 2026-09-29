@@ -356,7 +356,7 @@ dfu-util -w -a 0 -s 0x90040000:leave -D duet_0x42.bin -d ,0483:df11 &
 sleep 0.5
 python3 tools/hostlink_reboot.py reboot /dev/cu.usbmodemXXXXXXXX   # that Lab's port
 wait
-python3 tools/hostlink_reboot.py hello  /dev/cu.usbmodemXXXXXXXX   # expect: duet | Duet | 0.1.0
+python3 tools/hostlink_reboot.py hello  /dev/cu.usbmodemXXXXXXXX   # expect: duet | Duet | 0.1.1
 ```
 
 - Flash one Lab at a time: dfu-util takes whichever bootloader appears.

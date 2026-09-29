@@ -69,7 +69,7 @@ static const char* const kScaleLabels[kNumScalesMirror] = {
 };
 
 static const DescriptorBuilder::ModuleInfo kInfo = {
-    "duet", "Duet", "0.1.0", "i2c", "host-probe", "v2"
+    "duet", "Duet", "0.1.1", "i2c", "host-probe", "v2"
 };
 
 static AlchemyLab hw;                       /* stub-backed on the host */
@@ -216,7 +216,7 @@ static void Compose()
                   "handpan; left goes toward bell metal, right toward gongs.");
     k_shimmer.Help("Beating between each mode and its split partner.");
     k_metal.Help("Level of the untuned shell modes above the tuned core.");
-    k_tilt.Help("How fast the high modes die relative to the fundamental.");
+    k_tilt.Help("Brightness of the ring: overtone level and how fast it dies.");
     k_cavlvl.Help("The air cavity in the mix — the bloom under the attack.");
     k_contact.Help("Bare skin-on-steel tak, bypassing the resonators.");
 
