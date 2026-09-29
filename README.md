@@ -4,9 +4,9 @@
 
 *Duet in the rack: Lab #2 on the left, Lab #1 on the right, and between
 them the Mega's 3.5" screen in a printed 3U faceplate. The screen is
-showing Lab #2's Play page, with the triangle beside the title pointing
-toward it. Each Lab's column of strike lights runs down its side of the
-screen.*
+showing Lab #1's Voicing page, with the triangle beside the title pointing
+toward it. Lab #1 has just played its ding (amber, bottom of the right-hand
+column), and Lab #2 is answering (magenta, in the left-hand column).*
 
 Firmware for two [Hermetic Modular Alchemy Lab](https://hermeticmodular.com/modules/alchemy-lab)
 Eurorack modules and an Arduino Mega 2560 with a 3.5" TFT, working as one
